@@ -212,52 +212,62 @@ function App() {
           />
         </Box>
       </Grid>
-      <Grid item xs={12} textAlign="left">
-        <FormControl>
-          <InputLabel id="demo-simple-select-label">集計項目</InputLabel>
-          <Select
-            labelId="demo-simple-select-label"
-            id="demo-simple-select"
-            value={columns?.total || ""}
-            label="集計項目"
-            onChange={handleChangeSummarize}
-            sx={{ minWidth: 120 }}
-            disabled={header.length === 0}
-          >
-            {header.map((h, index) => (
-              <MenuItem value={h.field} key={h.field || index}>
-                {h.field}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl>
-          <InputLabel id="demo-simple-select-label">サブ集計項目</InputLabel>
-          <Select
-            labelId="demo-simple-select-label"
-            id="demo-simple-select"
-            value={columns?.sub || ""}
-            label="集計項目"
-            onChange={(e) =>
-              setColumns({ ...columns, sub: e.target.value.toString() })
-            }
-            sx={{ minWidth: 120 }}
-            disabled={header.length === 0}
-          >
-            {header.map((h, index) => (
-              <MenuItem value={h.field} key={h.field || index}>
-                {h.field}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField value={input} onChange={(e) => setInput(e.target.value)} />
+      <Grid item container xs={12} textAlign="left" spacing={2} mt={1}>
+        <Grid item>
+          <FormControl>
+            <InputLabel id="demo-simple-select-label">集計項目</InputLabel>
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={columns?.total || ""}
+              label="集計項目"
+              onChange={handleChangeSummarize}
+              sx={{ minWidth: 120 }}
+              disabled={header.length === 0}
+            >
+              {header.map((h, index) => (
+                <MenuItem value={h.field} key={h.field || index}>
+                  {h.field}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item>
+          <FormControl>
+            <InputLabel id="demo-simple-select-label">サブ集計項目</InputLabel>
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={columns?.sub || ""}
+              label="サブ集計項目"
+              onChange={(e) =>
+                setColumns({ ...columns, sub: e.target.value.toString() })
+              }
+              sx={{ minWidth: 120 }}
+              disabled={header.length === 0}
+            >
+              {header.map((h, index) => (
+                <MenuItem value={h.field} key={h.field || index}>
+                  {h.field}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item>
+          <TextField value={input} onChange={(e) => setInput(e.target.value)} />
+        </Grid>
       </Grid>
-      <Grid item xs={12}>
-        <IconButton onClick={handleCopy}>
-          <ContentCopyIcon />
-        </IconButton>
-        <TextField fullWidth multiline rows={3} value={result} />
+      <Grid item container spacing={1} xs={12} mt={1}>
+        <Grid item xs="auto" flexGrow={1}>
+          <IconButton onClick={handleCopy}>
+            <ContentCopyIcon />
+          </IconButton>
+        </Grid>
+        <Grid item flexGrow={2}>
+          <TextField fullWidth multiline rows={3} value={result} />
+        </Grid>
       </Grid>
     </Grid>
   );
