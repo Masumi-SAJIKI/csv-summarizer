@@ -1,34 +1,245 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
+import { styled } from "@mui/material/styles";
+import Button from "@mui/material/Button";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import Box from "@mui/material/Box";
+import {
+  FormControl,
+  Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  Typography,
+  TextField,
+} from "@mui/material";
+import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+
+const VisuallyHiddenInput = styled("input")({
+  clip: "rect(0 0 0 0)",
+  clipPath: "inset(50%)",
+  height: 1,
+  overflow: "hidden",
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  whiteSpace: "nowrap",
+  width: 1,
+});
+
+interface SummarizeColumn {
+  total: string;
+}
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [csv, setCsv] = useState<string>();
+  const [path, setPath] = useState<string>();
+  const [result, setResult] = useState<string>("");
+  const [rows, setRows] = useState<{ [key: string]: string }[]>([]);
+  const [header, setHeader] = useState<GridColDef[]>([]);
+  const [columns, setColumns] = useState<SummarizeColumn | undefined>(
+    undefined
+  );
+
+  const handleChangeSummarize = useCallback(
+    (event: SelectChangeEvent<HTMLInputElement>) => {
+      setColumns({ total: event.target.value.toString() });
+    },
+    []
+  );
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(result).then(
+      () => {
+        console.log("copied");
+      },
+      () => {
+        console.log("occurred error at copy");
+      }
+    );
+  }, [result]);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files && event.target.files[0];
+
+      if (file) {
+        setPath(file.name);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target?.result as string;
+          setCsv(content);
+        };
+        reader.readAsText(file);
+      }
+      console.log("handleFileUploaded");
+    } catch (error) {
+      console.log("handleFileUpload", error);
+    }
+  };
+  const parseCsvRow = (row: string): string[] => {
+    try {
+      let insideQuotes = false;
+      const values: string[] = [];
+      let currentValue = "";
+
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+
+        if (char === '"') {
+          insideQuotes = !insideQuotes;
+        } else if (char === "," && !insideQuotes) {
+          values.push(currentValue);
+          currentValue = "";
+        } else {
+          currentValue += char;
+        }
+      }
+
+      values.push(currentValue);
+      console.log("parseCsvRow");
+      return values;
+    } catch (error) {
+      console.log("parseCsvRow", error);
+    }
+    return [];
+  };
+  useEffect(() => {
+    try {
+      if (csv) {
+        const lines = csv.split("\n").filter((r) => r);
+        const headers = lines[0]
+          .split(",")
+          .map((h) => h.replace('"', "").replace('"', "").toLowerCase());
+
+        const existId = headers.includes("id");
+        const jsonDataArray: { [key: string]: string }[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = parseCsvRow(lines[i]);
+          const entry: { [key: string]: string } = {};
+
+          const forCount = existId ? headers.length : headers.length + 1;
+
+          for (let j = 0; j < forCount; j++) {
+            if (j >= headers.length) {
+              entry["id"] = i.toString();
+            } else {
+              entry[headers[j]] = values[j];
+            }
+          }
+          jsonDataArray.push(entry);
+        }
+
+        const heads = headers.map((h) => {
+          const col = jsonDataArray[0][h].toString().length || 4;
+          const calc = col > 25 ? col - 10 : col;
+          const calc2 = calc < 5 ? calc + 5 : calc;
+          return { field: h, headerName: h, width: calc2 * 12 };
+        });
+        console.log("useEffect", heads, jsonDataArray);
+        setRows(jsonDataArray);
+        setHeader(heads);
+      }
+    } catch (error) {
+      console.log("useEffect", error);
+    }
+  }, [csv]);
+
+  useEffect(() => {
+    try {
+      if (columns?.total) {
+        const sumTargets = rows
+          .map((r) => Number(r[columns?.total]) || 0)
+          .reduce((sum, ele) => sum + ele, 0);
+
+        const outTikets = rows.filter((r) =>
+          (r["件名"] || "").includes("チケット外")
+        );
+        const sumOutTicketTargets = outTikets
+          .map((r) => Number(r[columns?.total]) || 0)
+          .reduce((sum, ele) => sum + ele, 0);
+
+        setResult(`- ${columns?.total}:${Math.round(sumTargets * 10) / 10}
+-- チケット外:${Math.round(sumOutTicketTargets * 10) / 10}
+-- チケット:${
+          Math.round(sumTargets * 10) / 10 -
+          Math.round(sumOutTicketTargets * 10) / 10
+        }
+Dynamo上限問題対応]`);
+      }
+    } catch (error) {
+      console.log("calc", error);
+    }
+  }, [columns?.total, rows]);
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Grid
+      container
+      spacing={1}
+      direction="row"
+      justifyContent="flex-start"
+      alignItems="flex-start"
+      width="90vw"
+      mb={2}
+    >
+      <Grid item xs="auto">
+        <Button
+          component="label"
+          variant="contained"
+          startIcon={<CloudUploadIcon />}
+        >
+          Upload file
+          <VisuallyHiddenInput type="file" onChange={handleFileUpload} />
+        </Button>
+      </Grid>
+      <Grid item xs="auto">
+        <Typography>{path}</Typography>
+      </Grid>
+      <Grid item xs={12} sx={{ textAlign: "left" }}>
+        <Typography>件数：{rows.length}</Typography>
+        <Box sx={{ height: 400 }}>
+          <DataGrid
+            rows={rows}
+            columns={header}
+            hideFooter
+            disableColumnSelector
+            disableRowSelectionOnClick
+          />
+        </Box>
+      </Grid>
+      <Grid item xs={12} textAlign="left">
+        <FormControl>
+          <InputLabel id="demo-simple-select-label">集計項目</InputLabel>
+          <Select
+            labelId="demo-simple-select-label"
+            id="demo-simple-select"
+            value={columns?.total || ""}
+            label="集計項目"
+            onChange={handleChangeSummarize}
+            sx={{ minWidth: 120 }}
+            disabled={header.length === 0}
+          >
+            {header.map((h, index) => (
+              <MenuItem value={h.field} key={h.field || index}>
+                {h.field}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12}></Grid>
+      <Grid item xs={12}>
+        <IconButton onClick={handleCopy}>
+          <ContentCopyIcon />
+        </IconButton>
+        <TextField fullWidth multiline rows={3} value={result} />
+      </Grid>
+    </Grid>
   );
 }
 
