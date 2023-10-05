@@ -169,8 +169,7 @@ function App() {
 -- チケット:${
           Math.round(sumTargets * 10) / 10 -
           Math.round(sumOutTicketTargets * 10) / 10
-        }
-Dynamo上限問題対応]`);
+        }`);
       }
     } catch (error) {
       console.log("calc", error);
