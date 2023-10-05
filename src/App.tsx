@@ -16,7 +16,6 @@ import {
   Typography,
   TextField,
 } from "@mui/material";
-import HighlightOffIcon from "@mui/icons-material/HighlightOff";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 const VisuallyHiddenInput = styled("input")({
@@ -32,13 +31,15 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 interface SummarizeColumn {
-  total: string;
+  total?: string;
+  sub?: string;
 }
 
 function App() {
   const [csv, setCsv] = useState<string>();
   const [path, setPath] = useState<string>();
   const [result, setResult] = useState<string>("");
+  const [input, setInput] = useState<string>("");
   const [rows, setRows] = useState<{ [key: string]: string }[]>([]);
   const [header, setHeader] = useState<GridColDef[]>([]);
   const [columns, setColumns] = useState<SummarizeColumn | undefined>(
@@ -47,9 +48,9 @@ function App() {
 
   const handleChangeSummarize = useCallback(
     (event: SelectChangeEvent<HTMLInputElement>) => {
-      setColumns({ total: event.target.value.toString() });
+      setColumns({ ...columns, total: event.target.value.toString() });
     },
-    []
+    [columns]
   );
 
   const handleCopy = useCallback(() => {
@@ -152,21 +153,21 @@ function App() {
 
   useEffect(() => {
     try {
-      if (columns?.total) {
+      if (columns?.total && columns?.sub && input.length > 0) {
         const sumTargets = rows
-          .map((r) => Number(r[columns?.total]) || 0)
+          .map((r) => Number(r[columns.total || ""]) || 0)
           .reduce((sum, ele) => sum + ele, 0);
 
         const outTikets = rows.filter((r) =>
-          (r["件名"] || "").includes("チケット外")
+          (r[columns.sub || ""] || "").includes(input)
         );
         const sumOutTicketTargets = outTikets
-          .map((r) => Number(r[columns?.total]) || 0)
+          .map((r) => Number(r[columns.total || ""]) || 0)
           .reduce((sum, ele) => sum + ele, 0);
 
-        setResult(`- ${columns?.total}:${Math.round(sumTargets * 10) / 10}
--- チケット外:${Math.round(sumOutTicketTargets * 10) / 10}
--- チケット:${
+        setResult(`- ${columns.total}合計:${Math.round(sumTargets * 10) / 10}
+-- ${input}:${Math.round(sumOutTicketTargets * 10) / 10}
+-- そのた:${
           Math.round(sumTargets * 10) / 10 -
           Math.round(sumOutTicketTargets * 10) / 10
         }`);
@@ -174,7 +175,7 @@ function App() {
     } catch (error) {
       console.log("calc", error);
     }
-  }, [columns?.total, rows]);
+  }, [columns, input, rows]);
 
   return (
     <Grid
@@ -230,8 +231,28 @@ function App() {
             ))}
           </Select>
         </FormControl>
+        <FormControl>
+          <InputLabel id="demo-simple-select-label">サブ集計項目</InputLabel>
+          <Select
+            labelId="demo-simple-select-label"
+            id="demo-simple-select"
+            value={columns?.sub || ""}
+            label="集計項目"
+            onChange={(e) =>
+              setColumns({ ...columns, sub: e.target.value.toString() })
+            }
+            sx={{ minWidth: 120 }}
+            disabled={header.length === 0}
+          >
+            {header.map((h, index) => (
+              <MenuItem value={h.field} key={h.field || index}>
+                {h.field}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField value={input} onChange={(e) => setInput(e.target.value)} />
       </Grid>
-      <Grid item xs={12}></Grid>
       <Grid item xs={12}>
         <IconButton onClick={handleCopy}>
           <ContentCopyIcon />
